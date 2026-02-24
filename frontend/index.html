@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>5W1H Analysis App</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+
+    <!-- Theme Configuration -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "primary-content": "#ffffff",
+                        "primary-dark": "#0b6cb3",
+                        "primary-light": "#e0f2fe",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1c2a35",
+                        "text-main": "#111518",
+                        "text-secondary": "#637588",
+                        "text-muted": "#64748b",
+                        "border-light": "#e2e8f0",
+                        "border-dark": "#2d3a46",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 8px -2px rgba(19, 146, 236, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.03)',
+                        'glow': '0 0 0 2px #1392ec',
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            min-height: max(884px, 100dvh);
+            overflow-x: hidden;
+        }
+
+        /* Custom scrollbars */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        textarea::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        textarea::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        /* Interactive elements logic */
+        input[type="radio"]:checked+div {
+            border-color: #1392ec;
+            background-color: rgba(19, 146, 236, 0.05);
+            box-shadow: 0 0 0 1px #1392ec;
+        }
+
+        input[type="radio"]:checked+div .icon-container {
+            background-color: #1392ec;
+            color: #ffffff;
+        }
+
+        input[type="radio"]:checked+div .text-label {
+            color: #1392ec;
+            font-weight: 600;
+        }
+
+        .custom-input:focus-within {
+            border-color: #1392ec;
+            box-shadow: 0 0 0 1px #1392ec;
+        }
+
+        /* Screen transitions */
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Loading overlay */
+        #loading-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            backdrop-filter: blur(4px);
+        }
+
+        .dark #loading-overlay {
+            background: rgba(16, 26, 34, 0.8);
+        }
+
+        .spinner {
+            border: 4px solid rgba(19, 146, 236, 0.1);
+            border-left-color: #1392ec;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark text-text-main dark:text-white flex justify-center min-h-screen selection:bg-primary/20">
+
+    <!-- App Container -->
+    <div
+        class="w-full max-w-md bg-surface-light dark:bg-background-dark flex flex-col h-screen relative overflow-hidden shadow-2xl sm:rounded-xl sm:border sm:border-border-light dark:sm:border-border-dark sm:h-[800px] sm:my-8 relative">
+
+        <!-- GLOBAL LOADING OVERLAY -->
+        <div id="loading-overlay" class="rounded-xl">
+            <div class="spinner mb-4"></div>
+            <p class="text-primary font-medium">Analyzing Topic...</p>
+            <p class="text-sm text-text-muted mt-2">This usually takes 5-10 seconds</p>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SCREEN 1: SELECT PROFESSION                -->
+        <!-- ========================================== -->
+        <div id="screen-profession" class="screen active flex-col h-full w-full">
+            <header
+                class="flex items-center justify-between p-4 sticky top-0 z-10 bg-surface-light/95 dark:bg-background-dark/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
+                <button
+                    class="text-text-main dark:text-white flex items-center justify-center p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors opacity-0 cursor-default">
+                    <span class="material-symbols-outlined text-2xl">arrow_back</span>
+                </button>
+                <div class="flex-1 text-center pr-10">
+                    <div class="h-1 w-12 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto overflow-hidden">
+                        <div class="h-full w-1/3 bg-primary rounded-full"></div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto no-scrollbar px-6 pb-28">
+                <div class="pt-6 pb-2">
+                    <h1 class="font-display text-3xl font-bold tracking-tight text-text-main dark:text-white mb-2">Let's
+                        customize your experience.</h1>
+                    <p class="font-display text-base text-text-secondary dark:text-gray-400 leading-relaxed">Select your
+                        profession to get answers adapted to your specific needs.</p>
+                </div>
+
+                <div class="mt-4 mb-4">
+                    <div
+                        class="custom-input flex items-center w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark transition-all duration-200 group hover:border-primary/30">
+                        <span
+                            class="material-symbols-outlined text-gray-400 dark:text-gray-500 mr-3 group-focus-within:text-primary transition-colors">edit</span>
+                        <input id="custom-profession" aria-label="Custom profession input"
+                            class="flex-1 bg-transparent border-none p-0 text-base font-medium text-text-main dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-0"
+                            placeholder="Or type your profession..." type="text" />
+                    </div>
+                </div>
+
+                <form id="profession-form" class="grid grid-cols-2 gap-4 mt-8">
+                    <label class="cursor-pointer group relative">
+                        <input class="profession-radio peer sr-only" name="profession" type="radio" value="Student" />
+                        <div
+                            class="flex flex-col items-center justify-center p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark transition-all duration-200 hover:border-primary/50 hover:shadow-soft h-32 lg:h-40">
+                            <div
+                                class="icon-container mb-2 flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary/10 text-primary transition-colors duration-200">
+                                <span class="material-symbols-outlined text-[24px]">school</span>
+                            </div>
+                            <span
+                                class="text-label text-sm lg:text-base font-medium text-gray-700 dark:text-gray-200 text-center transition-colors">Student</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative">
+                        <input class="profession-radio peer sr-only" name="profession" type="radio" value="Teacher" />
+                        <div
+                            class="flex flex-col items-center justify-center p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark transition-all duration-200 hover:border-primary/50 hover:shadow-soft h-32 lg:h-40">
+                            <div
+                                class="icon-container mb-2 flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary/10 text-primary transition-colors duration-200">
+                                <span class="material-symbols-outlined text-[24px]">cast_for_education</span>
+                            </div>
+                            <span
+                                class="text-label text-sm lg:text-base font-medium text-gray-700 dark:text-gray-200 text-center transition-colors">Teacher</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative">
+                        <input class="profession-radio peer sr-only" name="profession" type="radio" value="Engineer" />
+                        <div
+                            class="flex flex-col items-center justify-center p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark transition-all duration-200 hover:border-primary/50 hover:shadow-soft h-32 lg:h-40">
+                            <div
+                                class="icon-container mb-2 flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary/10 text-primary transition-colors duration-200">
+                                <span class="material-symbols-outlined text-[24px]">engineering</span>
+                            </div>
+                            <span
+                                class="text-label text-sm lg:text-base font-medium text-gray-700 dark:text-gray-200 text-center transition-colors">Engineer</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative">
+                        <input class="profession-radio peer sr-only" name="profession" type="radio" value="Doctor" />
+                        <div
+                            class="flex flex-col items-center justify-center p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark transition-all duration-200 hover:border-primary/50 hover:shadow-soft h-32 lg:h-40">
+                            <div
+                                class="icon-container mb-2 flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary/10 text-primary transition-colors duration-200">
+                                <span class="material-symbols-outlined text-[24px]">stethoscope</span>
+                            </div>
+                            <span
+                                class="text-label text-sm lg:text-base font-medium text-gray-700 dark:text-gray-200 text-center transition-colors">Doctor</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative">
+                        <input class="profession-radio peer sr-only" name="profession" type="radio" value="Marketer" />
+                        <div
+                            class="flex flex-col items-center justify-center p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark transition-all duration-200 hover:border-primary/50 hover:shadow-soft h-32 lg:h-40">
+                            <div
+                                class="icon-container mb-2 flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary/10 text-primary transition-colors duration-200">
+                                <span class="material-symbols-outlined text-[24px]">campaign</span>
+                            </div>
+                            <span
+                                class="text-label text-sm lg:text-base font-medium text-gray-700 dark:text-gray-200 text-center transition-colors">Marketer</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative">
+                        <input class="profession-radio peer sr-only" name="profession" type="radio"
+                            value="Researcher" />
+                        <div
+                            class="flex flex-col items-center justify-center p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark transition-all duration-200 hover:border-primary/50 hover:shadow-soft h-32 lg:h-40">
+                            <div
+                                class="icon-container mb-2 flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary/10 text-primary transition-colors duration-200">
+                                <span class="material-symbols-outlined text-[24px]">biotech</span>
+                            </div>
+                            <span
+                                class="text-label text-sm lg:text-base font-medium text-gray-700 dark:text-gray-200 text-center transition-colors">Researcher</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative">
+                        <input class="profession-radio peer sr-only" name="profession" type="radio" value="Designer" />
+                        <div
+                            class="flex flex-col items-center justify-center p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark transition-all duration-200 hover:border-primary/50 hover:shadow-soft h-32 lg:h-40">
+                            <div
+                                class="icon-container mb-2 flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary/10 text-primary transition-colors duration-200">
+                                <span class="material-symbols-outlined text-[24px]">design_services</span>
+                            </div>
+                            <span
+                                class="text-label text-sm lg:text-base font-medium text-gray-700 dark:text-gray-200 text-center transition-colors">Designer</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative">
+                        <input class="profession-radio peer sr-only" name="profession" type="radio" value="Developer" />
+                        <div
+                            class="flex flex-col items-center justify-center p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark transition-all duration-200 hover:border-primary/50 hover:shadow-soft h-32 lg:h-40">
+                            <div
+                                class="icon-container mb-2 flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary/10 text-primary transition-colors duration-200">
+                                <span class="material-symbols-outlined text-[24px]">code</span>
+                            </div>
+                            <span
+                                class="text-label text-sm lg:text-base font-medium text-gray-700 dark:text-gray-200 text-center transition-colors">Developer</span>
+                        </div>
+                    </label>
+                </form>
+
+
+            </main>
+
+            <footer
+                class="absolute bottom-0 left-0 right-0 bg-white dark:bg-background-dark p-6 border-t border-gray-100 dark:border-gray-800 backdrop-blur-xl bg-opacity-90 dark:bg-opacity-90 sm:rounded-b-xl">
+                <button id="btn-profession-continue"
+                    class="w-full flex items-center justify-center h-12 rounded-xl bg-primary hover:bg-primary-dark active:scale-[0.98] transition-all text-white font-semibold text-lg shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                    Continue
+                </button>
+            </footer>
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- SCREEN 2: ENTER TOPIC                      -->
+        <!-- ========================================== -->
+        <div id="screen-topic" class="screen flex-col h-full w-full bg-surface-light dark:bg-surface-dark">
+            <header
+                class="flex items-center justify-between px-4 py-3 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark z-10">
+                <button id="btn-back-to-profession" aria-label="Go back"
+                    class="flex items-center justify-center w-10 h-10 rounded-full text-text-main dark:text-white hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <span class="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
+                </button>
+                <div class="flex-1 text-center">
+                    <div class="h-1 w-12 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto overflow-hidden">
+                        <div class="h-full w-2/3 bg-primary rounded-full"></div>
+                    </div>
+                </div>
+                <div class="w-10"></div> <!-- Spacer for centering -->
+            </header>
+
+            <main class="flex-1 overflow-y-auto px-5 py-6 flex flex-col">
+                <!-- Context Badge -->
+                <div class="flex justify-center mb-8">
+                    <div
+                        class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-light dark:bg-primary/20 rounded-full border border-primary/20 dark:border-primary/30">
+                        <span class="material-symbols-outlined text-primary text-[18px]">person</span>
+                        <span class="text-sm font-medium text-primary-dark dark:text-primary">Perspective: <strong
+                                id="display-profession">Engineer</strong></span>
+                        <button id="btn-edit-profession"
+                            class="ml-1 text-primary hover:text-primary-dark transition-colors flex items-center">
+                            <span class="material-symbols-outlined text-[16px]">edit</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Heading -->
+                <div class="mb-6">
+                    <h2 class="text-3xl font-bold tracking-tight text-text-main dark:text-white leading-tight">
+                        What do you want to explore?
+                    </h2>
+                    <p class="mt-2 text-text-muted dark:text-gray-400 text-sm">
+                        We'll tailor the answer to your expertise.
+                    </p>
+                </div>
+
+                <!-- Input Area -->
+                <div class="flex-1 flex flex-col min-h-[200px]">
+                    <label class="sr-only" for="topic-input">Topic Input</label>
+                    <div class="relative flex-1 group">
+                        <textarea id="topic-input"
+                            class="w-full h-full p-4 text-lg bg-background-light dark:bg-background-dark border-2 border-transparent focus:border-primary focus:ring-0 rounded-xl resize-none placeholder-text-muted/60 dark:placeholder-gray-500 text-text-main dark:text-white outline-none transition-all duration-200 shadow-inner"
+                            placeholder="Type a concept, problem, or topic here..."></textarea>
+                        <!-- Decorative corner accent -->
+                        <div class="absolute bottom-3 right-3 pointer-events-none">
+                            <span class="material-symbols-outlined text-primary/40 text-2xl">edit_note</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Suggestions (Chips) -->
+                <div class="mt-6 mb-4">
+                    <p class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Suggested Topics</p>
+                    <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                        <button
+                            class="topic-suggestion whitespace-nowrap px-4 py-2 bg-background-light dark:bg-background-dark hover:bg-primary-light dark:hover:bg-primary/20 border border-border-light dark:border-border-dark rounded-full text-sm font-medium text-text-main dark:text-gray-200 transition-colors">
+                            Quantum Computing
+                        </button>
+                        <button
+                            class="topic-suggestion whitespace-nowrap px-4 py-2 bg-background-light dark:bg-background-dark hover:bg-primary-light dark:hover:bg-primary/20 border border-border-light dark:border-border-dark rounded-full text-sm font-medium text-text-main dark:text-gray-200 transition-colors">
+                            Artificial Intelligence
+                        </button>
+                        <button
+                            class="topic-suggestion whitespace-nowrap px-4 py-2 bg-background-light dark:bg-background-dark hover:bg-primary-light dark:hover:bg-primary/20 border border-border-light dark:border-border-dark rounded-full text-sm font-medium text-text-main dark:text-gray-200 transition-colors">
+                            Blockchain Technology
+                        </button>
+                    </div>
+                </div>
+            </main>
+
+            <footer
+                class="p-5 bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark sticky bottom-0 sm:rounded-b-xl">
+                <button id="btn-analyze"
+                    class="w-full flex items-center justify-center gap-2 h-14 bg-primary hover:bg-primary-dark active:scale-[0.98] text-white rounded-lg text-lg font-bold shadow-lg shadow-primary/25 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                    <span class="material-symbols-outlined">analytics</span>
+                    <span>Analyze & Explain</span>
+                </button>
+            </footer>
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- SCREEN 3: TOPIC ANALYSIS RESULTS           -->
+        <!-- ========================================== -->
+        <div id="screen-results" class="screen flex-col h-full w-full">
+            <!-- Sticky Header -->
+            <div
+                class="sticky top-0 z-50 flex items-center bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm p-4 pb-2 justify-between border-b border-slate-200 dark:border-slate-800 rounded-t-xl">
+                <button id="btn-back-to-topic"
+                    class="text-slate-900 dark:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <span class="material-symbols-outlined text-[24px]">arrow_back</span>
+                </button>
+                <h2
+                    class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
+                    Topic Analysis</h2>
+                <div class="flex items-center justify-end gap-2">
+                    <button
+                        class="text-primary flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title="Start Over" onclick="resetApp()">
+                        <span class="material-symbols-outlined text-[24px]">home</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <main class="flex-1 flex flex-col p-4 gap-6 overflow-y-auto no-scrollbar">
+                <!-- Hero Section: Topic & Context -->
+                <div class="flex flex-col gap-4">
+                    <h1 id="result-topic-title"
+                        class="text-slate-900 dark:text-white tracking-tight text-[32px] font-extrabold leading-tight text-left">
+                        ...</h1>
+
+                    <div class="flex gap-3 flex-wrap">
+                        <!-- Role Badge -->
+                        <div
+                            class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary/10 dark:bg-primary/20 pl-3 pr-4 ring-1 ring-primary/20">
+                            <span class="material-symbols-outlined text-primary text-[18px]">person</span>
+                            <p class="text-primary text-sm font-semibold leading-normal"><span
+                                    id="result-profession-display"></span> Perspective</p>
+                        </div>
+
+                        <!-- Complexity Badge -->
+                        <div id="complexity-badge"
+                            class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-orange-500/10 dark:bg-orange-400/20 pl-3 pr-4 ring-1 ring-orange-500/20">
+                            <span
+                                class="material-symbols-outlined text-orange-600 dark:text-orange-400 text-[18px]">equalizer</span>
+                            <p id="complexity-text"
+                                class="text-orange-700 dark:text-orange-300 text-sm font-semibold leading-normal">
+                                Intermediate</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5W1H Grid -->
+                <div class="flex flex-col gap-4">
+
+                    <!-- WHAT -->
+                    <div
+                        class="bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
+                        <div class="h-1 w-full bg-primary"></div>
+                        <div class="p-5 flex flex-col gap-3">
+                            <div class="flex items-center gap-3 mb-1">
+                                <div
+                                    class="flex items-center justify-center size-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-primary">
+                                    <span class="material-symbols-outlined">help</span>
+                                </div>
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white">What is it?</h3>
+                            </div>
+                            <div class="text-slate-600 dark:text-slate-300 text-base leading-relaxed pl-1"
+                                id="ans-what">...</div>
+                        </div>
+                    </div>
+
+                    <!-- HOW -->
+                    <div
+                        class="bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
+                        <div class="h-1 w-full bg-indigo-500"></div>
+                        <div class="p-5 flex flex-col gap-3">
+                            <div class="flex items-center gap-3 mb-1">
+                                <div
+                                    class="flex items-center justify-center size-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                                    <span class="material-symbols-outlined">settings</span>
+                                </div>
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white">How does it work?</h3>
+                            </div>
+                            <div class="text-slate-600 dark:text-slate-300 text-base leading-relaxed pl-1" id="ans-how">
+                                ...</div>
+                        </div>
+                    </div>
+
+                    <!-- WHY -->
+                    <div
+                        class="bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
+                        <div class="h-1 w-full bg-emerald-500"></div>
+                        <div class="p-5 flex flex-col gap-3">
+                            <div class="flex items-center gap-3 mb-1">
+                                <div
+                                    class="flex items-center justify-center size-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+                                    <span class="material-symbols-outlined">lightbulb</span>
+                                </div>
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white">Why it matters?</h3>
+                            </div>
+                            <div class="text-slate-600 dark:text-slate-300 text-base leading-relaxed pl-1" id="ans-why">
+                                ...</div>
+                        </div>
+                    </div>
+
+                    <!-- Small Grid for WHO, WHERE, WHEN -->
+                    <div class="grid grid-cols-1 gap-4">
+
+                        <!-- WHO -->
+                        <div
+                            class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="material-symbols-outlined text-slate-400">group</span>
+                                <h4
+                                    class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                    Who</h4>
+                            </div>
+                            <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed" id="ans-who">...</p>
+                        </div>
+
+                        <!-- WHERE -->
+                        <div
+                            class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="material-symbols-outlined text-slate-400">location_on</span>
+                                <h4
+                                    class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                    Where</h4>
+                            </div>
+                            <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed" id="ans-where">...</p>
+                        </div>
+
+                        <!-- WHEN -->
+                        <div
+                            class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="material-symbols-outlined text-slate-400">schedule</span>
+                                <h4
+                                    class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                    When</h4>
+                            </div>
+                            <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed" id="ans-when">...</p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Bottom Actions Spacing -->
+                <div class="h-24"></div>
+            </main>
+
+            <!-- Floating Action Button / Bottom Bar -->
+            <div
+                class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background-light dark:from-background-dark via-background-light/80 dark:via-background-dark/80 to-transparent pointer-events-none sm:rounded-b-xl">
+                <div class="flex gap-3 pointer-events-auto">
+                    <button id="btn-adjust-role"
+                        class="flex-1 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 h-14 rounded-xl font-bold shadow-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                        <span class="material-symbols-outlined">tune</span>
+                        Adjust Role
+                    </button>
+                    <!-- Ask follow up visually looks good but doesn't exist yet, doing nothing for now -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Application Logic -->
+    <script src="app.js"></script>
+</body>
+
+</html>
