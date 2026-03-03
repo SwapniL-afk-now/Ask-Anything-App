@@ -60,3 +60,8 @@ htmlcov/
 # Misc
 *.bak
 *.tmp
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
