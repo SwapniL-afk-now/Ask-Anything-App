@@ -135,8 +135,8 @@ Return ONLY valid JSON.
             max_output_tokens=4096,
         )
 
-        # Generate content
-        response = self.client.models.generate_content(
+        # Generate content (async to avoid blocking the event loop)
+        response = await self.client.aio.models.generate_content(
             model=self.MODEL_ID,
             contents=self._build_user_prompt(topic),
             config=config,

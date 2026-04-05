@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/app_state.dart';
+import '../services/settings_service.dart';
 import 'topic_screen.dart';
 
 class ProfessionScreen extends StatefulWidget {
@@ -35,6 +36,91 @@ class _ProfessionScreenState extends State<ProfessionScreen> {
       }
       setState(() {}); // allow button to update state
     });
+    _promptSettingsIfNeeded();
+  }
+
+  Future<void> _promptSettingsIfNeeded() async {
+    final configured = await SettingsService.isConfigured();
+    if (!configured && mounted) {
+      // Show settings dialog on first launch
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _showSettingsDialog();
+      });
+    }
+  }
+
+  void _showSettingsDialog() async {
+    final currentIp = await SettingsService.getBackendIp();
+    final currentPort = await SettingsService.getBackendPort();
+    final ipController = TextEditingController(text: currentIp);
+    final portController = TextEditingController(text: currentPort);
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: currentIp.isNotEmpty,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Backend Server',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Enter the IP address of the laptop running the backend server.',
+              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: ipController,
+              decoration: InputDecoration(
+                labelText: 'IP Address',
+                hintText: '192.168.1.100',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.computer),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: portController,
+              decoration: InputDecoration(
+                labelText: 'Port',
+                hintText: '8000',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.numbers),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          if (currentIp.isNotEmpty)
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.inter()),
+            ),
+          ElevatedButton(
+            onPressed: () async {
+              final ip = ipController.text.trim();
+              if (ip.isEmpty) return;
+              await SettingsService.setBackendIp(ip);
+              await SettingsService.setBackendPort(
+                  portController.text.trim().isEmpty ? '8000' : portController.text.trim());
+              if (context.mounted) Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1392EC),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text('Save', style: GoogleFonts.inter(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onContinue() {
@@ -55,10 +141,7 @@ class _ProfessionScreenState extends State<ProfessionScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7F8),
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {}, // Not needed for first screen unless closing app
-        ),
+        leading: const SizedBox(width: 48),
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Center(
@@ -77,7 +160,13 @@ class _ProfessionScreenState extends State<ProfessionScreen> {
             ),
           ),
         ),
-        actions: [const SizedBox(width: 48)],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: Color(0xFF637588)),
+            onPressed: _showSettingsDialog,
+            tooltip: 'Backend settings',
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -97,9 +186,9 @@ class _ProfessionScreenState extends State<ProfessionScreen> {
                       "Select your profession to get answers adapted to your specific needs.",
                       style: GoogleFonts.inter(fontSize: 16, color: const Color(0xFF637588)),
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -183,7 +272,7 @@ class _ProfessionScreenState extends State<ProfessionScreen> {
                 ),
               ),
             ),
-            
+
             Container(
               padding: const EdgeInsets.all(24),
               decoration: const BoxDecoration(
